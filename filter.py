@@ -15,7 +15,7 @@ from numpy import *
 #  https://pysd-cookbook.readthedocs.io/en/latest/data/Emails/Email_Data_Formatter.html
 
 mboxfile = open('gmail.mbox', 'r')
-label_filter = 'people-'
+label_filter = 'people'
 filtered_lines = []
 current_message = []
 
@@ -48,8 +48,13 @@ for line in mboxfile:
     current_message.append(line)
 
 print("Done reading, writing new file.")
+print("Num Messages: ", saved_num_messages)
+print("Lines to write: ", len(filtered_lines))
 f = open(label_filter + ".mbox", "w")
+lines_written = 0
 for line in filtered_lines:
+    lines_written += 1
+    print("Line ", lines_written, "/", len(filtered_lines))
     f.write(line)
 f.close()
 
