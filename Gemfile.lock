@@ -1,0 +1,17 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    call-me (0.0.2.3)
+      refining
+    mbox (0.1.0)
+      call-me
+    refining (0.0.5.5)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  mbox
+
+BUNDLED WITH
+   2.3.19
