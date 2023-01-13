@@ -23,3 +23,9 @@ for m in mb.values():
     for part in m.walk():
         if part.get_content_type() == "text/plain":
             print(part.get_payload())
+        elif part.get_content_type() in ["text/html", "multipart/alternative", "multipart/mixed"]:
+            continue
+        else:
+            print("---")
+            print("Attachment: ", part.get_content_type())
+            print("Size: ", len(part.get_payload()))
