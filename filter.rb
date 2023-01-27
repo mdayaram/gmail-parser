@@ -39,26 +39,51 @@ cli.say "\nLabels found: #{labels}"
 prompt_to_continue?
 
 cli.say "\nPlease type in the appropriate Joplin tag to use for each label...\n"
-label_to_tag = {}
+labels_to_tags = {}
 labels.each do |l|
-    label_to_tag[l] = (cli.ask "Tag for \"#{l}\"?").downcase
+    labels_to_tags[l] = (cli.ask "Tag for \"#{l}\"?").downcase
 end
 
 cli.say "\nWe'll use the following mapping for labels to tags, and create tags that don't exist:"
-label_to_tag.each do |l, t|
+labels_to_tags.each do |l, t|
     cli.say "#{l} => #{t}"
 end
 prompt_to_continue?
 
-# conversations.values.each do |messages|
-#     messages.each do |m|
-#         puts("===================================")
-#         puts("Thread ID: #{m.gmail_thread_id}")
-#         puts("Labels: #{m.gmail_labels.join(", ")}")
-#         puts("From: #{m.from}")
-#         puts("To: #{m.to}")
-#         puts("Date: #{m.date}")
-#         puts("Subject: #{m.subject}")
-#         puts("Body: #{m.text_body}")
-#     end
-# end
+cli.say "\nVerify that every email/note looks correct:\n"
+conversations.values.each do |messages|
+    # messages.each do |m|
+    #     puts("===================================")
+    #     puts("Thread ID: #{m.gmail_thread_id}")
+    #     puts("Labels: #{m.gmail_labels.join(", ")}")
+    #     puts("From: #{m.from}")
+    #     puts("To: #{m.to}")
+    #     puts("Date: #{m.date}")
+    #     puts("Subject: #{m.subject}")
+    #     puts("Body: #{m.text_body}")
+    # end
+    title = messages[0].subject
+    date = messages[0].date
+    labels = messages.map(&:gmail_labels).flatten.uniq
+    tags = labels.map { |l| labels_to_tags[l] }.compact
+    body = ""
+    messages.each do |m|
+        if m.is_self_note?
+            body += m.text_body + "\n"
+        else
+            body += "From: #{m.from}\nTo: #{m.to}\n\n"
+            body += m.text_body
+        end
+    end
+    body.strip!
+
+    cli.say "\n\n====================================="
+    cli.say "Title: #{title}"
+    cli.say "Date: #{date}"
+    cli.say "Tags: #{tags} #{tags.size > 1 ? "- !!WARNING!! - MULTIPLE TAGS!": ""}\n"
+    cli.say "Body:"
+    cli.say "#{body.empty? ? "NO BODY" : body}"
+    prompt_to_continue?
+    # TODO: Prompt to continue, upload, or skip.
+    #joplin.create_note(title: title, body: body, date: date, tags: tags)
+end

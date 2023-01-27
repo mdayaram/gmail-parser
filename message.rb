@@ -39,6 +39,11 @@ class Message
         end
     end
 
+    def is_self_note?
+        emails = ["m@noj.cc", "i.am.noj@gmail.com", "noj@alumni.cmu.edu", "noj@squareup.com", "noj@moovweb.com"]
+        emails.any? { |e| from.include?(e) } && emails.any? { |e| to.include?(e) }
+    end
+
     # Returns a hash of...
     # { conversation_thread_id => [messages...] }
     def self.parse_conversations!(mbox_filename)
