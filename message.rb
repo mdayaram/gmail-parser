@@ -49,6 +49,7 @@ class Message
             conversations[message.gmail_thread_id] ||= []
             conversations[message.gmail_thread_id] << message
         end
+        conversations.values.each { |c| c.sort_by!(&:date) }
         conversations
     end
 end
