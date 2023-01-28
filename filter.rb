@@ -51,17 +51,7 @@ end
 prompt_to_continue?
 
 cli.say "\nVerify that every email/note looks correct:\n"
-conversations.values.each do |messages|
-    # messages.each do |m|
-    #     puts("===================================")
-    #     puts("Thread ID: #{m.gmail_thread_id}")
-    #     puts("Labels: #{m.gmail_labels.join(", ")}")
-    #     puts("From: #{m.from}")
-    #     puts("To: #{m.to}")
-    #     puts("Date: #{m.date}")
-    #     puts("Subject: #{m.subject}")
-    #     puts("Body: #{m.text_body}")
-    # end
+conversations.values.each_with_index do |messages, index|
     title = messages[0].subject
     date = messages[0].date
     labels = messages.map(&:gmail_labels).flatten.uniq
@@ -77,13 +67,30 @@ conversations.values.each do |messages|
     end
     body.strip!
 
-    cli.say "\n\n====================================="
+    cli.say "\n\n======== ENTRY #{index + 1}/#{conversations.size} ========="
     cli.say "Title: #{title}"
     cli.say "Date: #{date}"
     cli.say "Tags: #{tags} #{tags.size > 1 ? "- !!WARNING!! - MULTIPLE TAGS!": ""}\n"
     cli.say "Body:"
     cli.say "#{body.empty? ? "NO BODY" : body}"
-    prompt_to_continue?
-    # TODO: Prompt to continue, upload, or skip.
-    #joplin.create_note(title: title, body: body, date: date, tags: tags)
+
+    cli.say "\n---\nWant to keep this entry?"
+    response = cli.choose do |menu|
+        menu.prompt = "Choose an action: "
+        menu.choice(:upload)
+        menu.choice(:skip)
+        menu.choice(:quit)
+    end
+
+    case response
+    when :upload
+        cli.say "You chose to upload, beginning upload process..."
+        #joplin.create_note(title: title, body: body, date: date, tags: tags)
+        cli.say "...done!"
+    when :skip
+        cli.say "Skipping entry #{index + 1}..."
+    when :quit
+        cli.say "Quitting..."
+        exit 1
+    end
 end
