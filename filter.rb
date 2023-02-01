@@ -25,6 +25,8 @@ if ARGV[0].nil? || ARGV[0].empty?
     abort("ERROR: Please provide a path to an mbox file as the argument.")
 end
 
+# Initialize joplin client.
+joplin
 
 
 cli.say "Parsing conversations in #{ARGV[0]}..."
@@ -44,9 +46,10 @@ labels.each do |l|
     labels_to_tags[l] = (cli.ask "Tag for \"#{l}\"?").downcase
 end
 
-cli.say "\nWe'll use the following mapping for labels to tags, and create tags that don't exist:"
+cli.say "\nWe'll use the following mapping for labels to tags (note: DNE means the tag does not exist and would be created):"
 labels_to_tags.each do |l, t|
-    cli.say "#{l} => #{t}"
+    current_tag = joplin.find_tag(t) || {"id" => "DNE"}
+    cli.say "#{l} => #{t} - ID: #{current_tag["id"]}"
 end
 prompt_to_continue?
 
@@ -85,7 +88,7 @@ conversations.values.each_with_index do |messages, index|
     case response
     when :upload
         cli.say "You chose to upload, beginning upload process..."
-        #joplin.create_note(title: title, body: body, date: date, tags: tags)
+        joplin.create_note(title: title, body: body, date: date, tags: tags)
         cli.say "...done!"
     when :skip
         cli.say "Skipping entry #{index + 1}..."
@@ -94,3 +97,6 @@ conversations.values.each_with_index do |messages, index|
         exit 1
     end
 end
+
+cli.say "\n\nDone with all entries!"
+cli.say "TODO: Don't forget to remove ALL labels from these email!"
