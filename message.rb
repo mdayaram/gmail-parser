@@ -16,13 +16,7 @@ class Message
         @gmail_labels = mbox_message.headers["X-Gmail-Labels"]&.split(",")&.map(&:strip)
         @from = mbox_message.headers["From"]
         @to = mbox_message.headers["To"]
-        @date = mbox_message.headers["Date"]
-
-        # Format: Mon, 7 Dec 2015 00:28:51 -0800
-        if !@date.nil? && !@date.empty? 
-            @date = DateTime.strptime(@date, "%a, %e %b %Y %H:%M:%S %z")
-        end
-
+        @date = parse_date(mbox_message.headers["Date"])
         @subject = mbox_message.headers["Subject"]
         @text_body = ""
         @html_body = ""
@@ -42,6 +36,24 @@ class Message
     def is_self_note?
         emails = ["m@noj.cc", "i.am.noj@gmail.com", "noj@alumni.cmu.edu", "noj@squareup.com", "noj@moovweb.com"]
         emails.any? { |e| from.include?(e) } && emails.any? { |e| to.include?(e) }
+    end
+
+    def parse_date(date_str)
+      return date_str if date_str.nil? || date_str.empty?
+
+      possible_formats = [
+        "%a, %e %b %Y %H:%M:%S %z", # Mon, 7 Dec 2015 00:28:51 -0800
+        "%e %b %Y %H:%M:%S %z",     # 7 Dec 2015 00:28:51 -0800
+      ]
+
+      possible_formats.each do |format|
+        begin
+          return DateTime.strptime(date_str, format)
+        rescue => _
+        end
+      end
+
+      raise "Could not parse date: #{date_str}"
     end
 
     # Returns a hash of...
