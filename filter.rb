@@ -68,23 +68,22 @@ conversations.values.each_with_index do |messages, index|
     date = messages[0].date
     labels = messages.map(&:gmail_labels).flatten.uniq
     tags = labels.map { |l| labels_to_tags[l] }.compact
-    body = ""
+    body_l = []
     messages.each do |m|
         if m.is_self_note?
-            body += m.text_body + "\n"
+          body_l << m.text_body
         else
-            body += "From: #{m.from}\nTo: #{m.to}\n\n"
-            body += m.text_body
+          body_l << "From: #{m.from}\nTo: #{m.to}\n\n" + m.text_body
         end
     end
-    body.strip!
+    body = body_l.map(&:strip).join("\n\n--\n\n")
 
     cli.say "\n\n======== ENTRY #{index + 1}/#{conversations.size} ========="
     cli.say "Title: #{title}"
     cli.say "Date: #{date}"
     cli.say "Tags: #{tags} #{tags.size > 1 ? "- !!WARNING!! - MULTIPLE TAGS!": ""}\n"
     cli.say "Body:"
-    cli.say "#{body.empty? ? "NO BODY" : body}"
+    puts body # cli.say has some issues printing some email bodies.
 
     cli.say "\n---\nWant to keep this entry?"
     response = cli.choose do |menu|
