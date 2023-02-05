@@ -42,14 +42,23 @@ prompt_to_continue?
 
 cli.say "\nPlease type in the appropriate Joplin tag to use for each label...\n"
 labels_to_tags = {}
+ignored_labels = []
 labels.each do |l|
-    labels_to_tags[l] = (cli.ask "Tag for \"#{l}\"?").downcase
+    tag = (cli.ask "Tag for \"#{l}\"?").downcase
+    if !tag.empty?
+      labels_to_tags[l] = tag
+    else
+      ignored_labels << l
+    end
 end
 
 cli.say "\nWe'll use the following mapping for labels to tags (note: DNE means the tag does not exist and would be created):"
 labels_to_tags.each do |l, t|
     current_tag = joplin.find_tag(t) || {"id" => "DNE"}
     cli.say "#{l} => #{t} - ID: #{current_tag["id"]}"
+end
+ignored_labels.each do |l|
+  cli.say "#{l} => IGNORED"
 end
 prompt_to_continue?
 
