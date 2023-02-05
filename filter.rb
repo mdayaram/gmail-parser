@@ -20,6 +20,9 @@ def prompt_to_continue?(msg = "\nContinue? ")
         exit 1
     end
 end
+def decode_quoted_printable(text)
+  text.unpack("M").first.encode("utf-8", "iso-8859-1")
+end
 
 if ARGV[0].nil? || ARGV[0].empty?
     abort("ERROR: Please provide a path to an mbox file as the argument.")
@@ -89,6 +92,7 @@ conversations.values.each_with_index do |messages, index|
     response = cli.choose do |menu|
         menu.prompt = "Choose an action: "
         menu.choice(:upload)
+        menu.choice(:upload_quote_printable_decoded)
         menu.choice(:skip)
         menu.choice(:quit)
     end
@@ -96,6 +100,11 @@ conversations.values.each_with_index do |messages, index|
     case response
     when :upload
         cli.say "You chose to upload, beginning upload process..."
+        joplin.create_note(title: title, body: body, date: date, tags: tags)
+        cli.say "...done!"
+    when :upload_quote_printable_decoded
+        cli.say "You chose to decode quoted printable and then upload..."
+        body = decode_quoted_printable(body)
         joplin.create_note(title: title, body: body, date: date, tags: tags)
         cli.say "...done!"
     when :skip
