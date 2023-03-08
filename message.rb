@@ -34,7 +34,7 @@ class Message
   end
 
   def is_self_note?
-    emails = ["m@noj.cc", "i.am.noj@gmail.com", "noj@alumni.cmu.edu", "noj@squareup.com", "noj@moovweb.com"]
+    emails = ["m@noj.cc", "i.am.noj@gmail.com", "noj@alumni.cmu.edu", "mdayaram@andrew.cmu.edu", "noj@squareup.com", "noj@moovweb.com"]
     emails.any? { |e| from.include?(e) } && emails.any? { |e| to.include?(e) }
   end
 
