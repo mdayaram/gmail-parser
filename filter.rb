@@ -23,6 +23,9 @@ end
 def decode_quoted_printable(text)
   text.unpack("M").first.encode("utf-8", "iso-8859-1")
 end
+def compact_excess_newlines(text)
+  text.gsub("\r", "").gsub(/(?<!\s)\n(?!\s)/, " ")
+end
 
 if ARGV[0].nil? || ARGV[0].empty?
   abort("ERROR: Please provide a path to an mbox file as the argument.")
@@ -43,15 +46,20 @@ labels -= ignored_labels
 cli.say "\nLabels found: #{labels}"
 prompt_to_continue?
 
-cli.say "\nPlease type in the appropriate Joplin tag to use for each label...\n"
+cli.say "\nPlease type in the appropriate Joplin tag to use for each label..."
+cli.say "Leave blank to use the suggested label."
+cli.say "Type \"skip\" to ignore the label."
 labels_to_tags = {}
 ignored_labels = []
 labels.each do |l|
-  tag = (cli.ask "Tag for \"#{l}\"?").downcase
-  if !tag.empty?
+  suggested = l.gsub("People/", "").strip.downcase
+  tag = (cli.ask "\nTag for \"#{l}\" - (suggestion: #{suggested})?").strip.downcase
+  if tag == "skip"
+    ignored_labels << l
+  elsif !tag.empty?
     labels_to_tags[l] = tag
   else
-    ignored_labels << l
+    labels_to_tags[l] = suggested
   end
 end
 
@@ -88,30 +96,40 @@ conversations.values.each_with_index do |messages, index|
   cli.say "Body:"
   puts body # cli.say has some issues printing some email bodies.
 
-  cli.say "\n---\nWant to keep this entry?"
-  response = cli.choose do |menu|
-    menu.prompt = "Choose an action: "
-    menu.choice(:upload)
-    menu.choice(:upload_quote_printable_decoded)
-    menu.choice(:skip)
-    menu.choice(:quit)
-  end
+  loop do
+    cli.say "\n---\nWant to keep this entry?"
+    response = cli.choose do |menu|
+      menu.prompt = "Choose an action: "
+      menu.choice(:upload)
+      menu.choice(:compact_excess_newlines)
+      menu.choice(:decode_quote_printable)
+      menu.choice(:skip)
+      menu.choice(:quit)
+    end
 
-  case response
-  when :upload
-    cli.say "You chose to upload, beginning upload process..."
-    joplin.create_note(title: title, body: body, date: date, tags: tags)
-    cli.say "...done!"
-  when :upload_quote_printable_decoded
-    cli.say "You chose to decode quoted printable and then upload..."
-    body = decode_quoted_printable(body)
-    joplin.create_note(title: title, body: body, date: date, tags: tags)
-    cli.say "...done!"
-  when :skip
-    cli.say "Skipping entry #{index + 1}..."
-  when :quit
-    cli.say "Quitting..."
-    exit 1
+    case response
+    when :upload
+      cli.say "You chose to upload, beginning upload process..."
+      joplin.create_note(title: title, body: body, date: date, tags: tags)
+      cli.say "...done!"
+      break
+    when :compact_excess_newlines
+      cli.say "You chose to compact excess new lines"
+      cli.say "Here's what that looks like:"
+      body = compact_excess_newlines(body)
+      puts "\n" + body
+    when :decode_quote_printable
+      cli.say "You chose to decode quoted printable"
+      cli.say "Here's what that looks like:"
+      body = decode_quoted_printable(body)
+      puts "\n" + body
+    when :skip
+      cli.say "Skipping entry #{index + 1}..."
+      break
+    when :quit
+      cli.say "Quitting..."
+      exit 1
+    end
   end
 end
 
