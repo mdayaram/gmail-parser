@@ -36,12 +36,12 @@ joplin
 
 
 cli.say "Parsing conversations in #{ARGV[0]}..."
-conversations = Message.parse_conversations!(ARGV.shift)
+conversations = Message.parse_conversations!(ARGV[0])
 cli.say "Total conversations: #{conversations.size}"
 
 
 ignored_labels = %w[Archived Sent Opened Important Category\ Personal]
-labels = conversations.values.reduce([]) { |labels, ms| (labels + ms.map(&:gmail_labels).flatten).uniq }
+labels = conversations.values.reduce([]) { |labels, ms| (labels + ms.map(&:gmail_labels).flatten).uniq }.sort
 labels -= ignored_labels
 cli.say "\nLabels found: #{labels}"
 prompt_to_continue?
@@ -133,5 +133,10 @@ conversations.values.each_with_index do |messages, index|
   end
 end
 
-cli.say "\n\nDone with all entries!"
-cli.say "TODO: Don't forget to remove ALL labels from these email!"
+cli.say "\n\n=============================================\n\nDone with all entries!"
+cli.say "\n\nTODO: Don't forget to remove ALL labels from these email!"
+delete_file = (cli.ask "Delete mbox file? (default is no) ").strip.downcase
+if delete_file[0] == "y" || delete_file[0] == "1"
+  File.delete(ARGV[0])
+  cli.say "Deleted file #{ARGV[0]}"
+end
