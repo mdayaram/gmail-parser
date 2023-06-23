@@ -38,6 +38,14 @@ class Message
     emails.any? { |e| from.include?(e) } && emails.any? { |e| to.include?(e) }
   end
 
+  def text_body_noreply
+    body_lines = self.text_body.split("\n")
+    while body_lines[-1].start_with?(">") do
+      body_lines.pop
+    end
+    body_lines.join("\n")
+  end
+
   def parse_date(date_str)
     return date_str if date_str.nil? || date_str.empty?
 

@@ -82,9 +82,9 @@ conversations.values.each_with_index do |messages, index|
   body_l = []
   messages.each do |m|
     if m.is_self_note?
-      body_l << m.text_body
+      body_l << m.text_body_noreply
     else
-      body_l << "From: #{m.from}\nTo: #{m.to}\n\n" + m.text_body
+      body_l << "From: #{m.from}\nTo: #{m.to}\n\n" + m.text_body_noreply
     end
   end
   body = body_l.map(&:strip).join("\n\n--\n\n")
