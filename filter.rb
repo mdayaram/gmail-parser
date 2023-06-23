@@ -4,6 +4,7 @@ require "rubygems"
 require "bundler/setup"
 require "highline"
 require "./message"
+require "./transformation"
 require "./joplin_api"
 
 
@@ -20,12 +21,6 @@ def prompt_to_continue?(msg = "\nContinue? ")
     exit 1
   end
 end
-def decode_quoted_printable(text)
-  text.unpack("M").first.encode("utf-8", "iso-8859-1")
-end
-def compact_excess_newlines(text)
-  text.gsub("\r", "").gsub(/(?<!\s)\n(?!\s)/, " ")
-end
 
 if ARGV[0].nil? || ARGV[0].empty?
   abort("ERROR: Please provide a path to an mbox file as the argument.")
@@ -34,11 +29,9 @@ end
 # Initialize joplin client.
 joplin
 
-
 cli.say "Parsing conversations in #{ARGV[0]}..."
 conversations = Message.parse_conversations!(ARGV[0])
 cli.say "Total conversations: #{conversations.size}"
-
 
 ignored_labels = %w[Archived Sent Opened Important Category\ Personal]
 labels = conversations.values.reduce([]) { |labels, ms| (labels + ms.map(&:gmail_labels).flatten).uniq }.sort
@@ -79,29 +72,40 @@ conversations.values.each_with_index do |messages, index|
   date = messages[0].date
   labels = messages.map(&:gmail_labels).flatten.uniq
   tags = labels.map { |l| labels_to_tags[l] }.compact
-  body_l = []
-  messages.each do |m|
-    if m.is_self_note?
-      body_l << m.text_body_noreply
-    else
-      body_l << "From: #{m.from}\nTo: #{m.to}\n\n" + m.text_body_noreply
-    end
-  end
-  body = body_l.map(&:strip).join("\n\n--\n\n")
-
-  cli.say "\n\n======== ENTRY #{index + 1}/#{conversations.size} ========="
-  cli.say "Title: #{title}"
-  cli.say "Date: #{date}"
-  cli.say "Tags: #{tags} #{tags.size > 1 ? "- !!WARNING!! - MULTIPLE TAGS!": ""}\n"
-  cli.say "Body:"
-  puts body # cli.say has some issues printing some email bodies.
+  transformations = {
+    decode_quoted_printable: false,
+    compact_excess_newlines: false,
+    noreply: false,
+    decode_eqnewlines: false
+  }
 
   loop do
+    body_l = []
+    messages.each do |m|
+      text_body = Transformation.apply(m.text_body, **transformations)
+      if m.is_self_note?
+        body_l << text_body
+      else
+        body_l << "From: #{m.from}\nTo: #{m.to}\n\n" + text_body
+      end
+    end
+    body = body_l.map(&:strip).join("\n\n--\n\n")
+
+    cli.say "\n\n======== ENTRY #{index + 1}/#{conversations.size} ========="
+    cli.say "Title: #{title}"
+    cli.say "Date: #{date}"
+    cli.say "Tags: #{tags}"
+    cli.say "Transformations: #{transformations}\n"
+    cli.say "Body:"
+    puts body # cli.say has some issues printing some email bodies.
+
     cli.say "\n---\nWant to keep this entry?"
     response = cli.choose do |menu|
       menu.prompt = "Choose an action: "
       menu.choice(:upload)
       menu.choice(:compact_excess_newlines)
+      menu.choice(:noreply)
+      menu.choice(:decode_eqnewlines)
       menu.choice(:decode_quote_printable)
       menu.choice(:skip)
       menu.choice(:quit)
@@ -114,15 +118,17 @@ conversations.values.each_with_index do |messages, index|
       cli.say "...done!"
       break
     when :compact_excess_newlines
-      cli.say "You chose to compact excess new lines"
-      cli.say "Here's what that looks like:"
-      body = compact_excess_newlines(body)
-      puts "\n" + body
+      cli.say "You chose to compact/uncompact excess new lines"
+      transformations[:compact_excess_newlines] = !transformations[:compact_excess_newlines]
     when :decode_quote_printable
-      cli.say "You chose to decode quoted printable"
-      cli.say "Here's what that looks like:"
-      body = decode_quoted_printable(body)
-      puts "\n" + body
+      cli.say "You chose to decode/encode quoted printable"
+      transformations[:decode_quoted_printable] = !transformations[:decode_quoted_printable]
+    when :noreply
+      cli.say "You chose to toggle the reply quote text"
+      transformations[:noreply] = !transformations[:noreply]
+    when :decode_eqnewlines
+      cli.say "You chose to toggle the =newlines"
+      transformations[:decode_eqnewlines] = !transformations[:decode_eqnewlines]
     when :skip
       cli.say "Skipping entry #{index + 1}..."
       break
@@ -134,7 +140,9 @@ conversations.values.each_with_index do |messages, index|
 end
 
 cli.say "\n\n=============================================\n\nDone with all entries!"
-cli.say "\n\nTODO: Don't forget to remove ALL labels from these email!"
+if labels_to_tags.size > 1
+  cli.say "\n\nWARNING: Multiple tags! Don't forget to remove ALL labels from these email!"
+end
 delete_file = (cli.ask "Delete mbox file? (default is no) ").strip.downcase
 if delete_file[0] == "y" || delete_file[0] == "1"
   File.delete(ARGV[0])
