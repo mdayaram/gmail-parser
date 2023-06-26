@@ -44,13 +44,13 @@ class Transformation
   def noreply
     lines = @raw_text.split("\n")
     has_reply = false
-    while lines && lines[-1].start_with?(">") do
+    while lines && lines[-1] && lines[-1].start_with?(">") do
       lines.pop
       has_reply = true
     end
 
     # Remove the "On <date> <person> wrote:"
-    if has_reply && lines[-1].strip.empty? && lines[-2].start_with?("On ")
+    if has_reply && lines.size > 2 && lines[-1].strip.empty? && lines[-2].start_with?("On ")
       lines.pop
       lines.pop
     end
